@@ -1,0 +1,3 @@
+[submodule "Python-static-Type-Checker/pyre-ast"]
+	path = Python-static-Type-Checker/pyre-ast
+	url = https://github.com/grievejia/pyre-ast.git

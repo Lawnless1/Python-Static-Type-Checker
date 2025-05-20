@@ -1,0 +1,5 @@
+(executable
+ (public_name Python-static-Type-Checker)
+ (name main)
+ (libraries Python_static_Type_Checker pyre-ast)
+ )
