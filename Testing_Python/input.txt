@@ -1,1 +1,4 @@
-i: list[int]
+a: tuple
+a: set
+a: list
+a: dict
