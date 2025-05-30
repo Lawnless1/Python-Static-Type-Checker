@@ -1,4 +1,1 @@
-a: tuple
-a: set
-a: list
-a: dict
+i: int|bool|list

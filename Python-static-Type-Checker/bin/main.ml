@@ -137,7 +137,7 @@ let str_to_statements (content: string): (PyreAst.Concrete.Statement.t list) =
   	| Result.Ok ast -> ast.body
   )
 
-let infer_type (expr: PyreAst.Concrete.Expression.t) (ctx_map : (string, PSTC.typ) Hashtbl.t) : PSTC.typ =
+let rec infer_type (expr: PyreAst.Concrete.Expression.t) (ctx_map : (string, PSTC.typ) Hashtbl.t) : PSTC.typ =
   let open PyreAst.Concrete.Expression in
   match expr with
   | Name {id; ctx; _} ->
@@ -164,14 +164,54 @@ let infer_type (expr: PyreAst.Concrete.Expression.t) (ctx_map : (string, PSTC.ty
         | String _ -> PSTC.String
         | ByteString _ -> PSTC.Bytes
       )
+  | BinOp {left; right; op; _} ->
+      let left_type = infer_type left ctx_map in
+      let right_type = infer_type right ctx_map in
+      (match op with 
+      
+        | BitOr -> (match left_type, right_type with
+          | PSTC.Union ts1, PSTC.Union ts2 ->
+              PSTC.Union (ts1 @ ts2)
+          | PSTC.Union ts1, _ ->
+              PSTC.Union (right_type :: ts1)
+          | _, PSTC.Union ts2 ->
+              PSTC.Union (left_type :: ts2)
+          | _, _ ->
+              if left_type == right_type then
+                left_type
+              else
+                PSTC.Union [left_type; right_type]
+          ) 
+        | _ -> raise (NotImplemented "Binary operation type inference is not implemented"))
   | _ -> raise (NotImplemented ("Type inference for this expression is not yet implemented"))
 
 let rec process_statements (statements: (PyreAst.Concrete.Statement.t list)) (ctx_map : (string, PSTC.typ) Hashtbl.t): unit =
   let open PyreAst.Concrete.Statement in
   List.iter (function statement ->
     match statement with
-    | FunctionDef { name; body; _ } ->
-        Printf.printf "Found function: %s\n" (PyreAst.Concrete.Identifier.to_string name);
+    | FunctionDef { name; body; args; returns ; _ } ->
+        let return_type = (match returns with
+          | Some ret -> infer_type ret ctx_map
+          | None -> PSTC.Unset) in
+        let args_ls = args.args in
+
+        (* Infer types for function arguments *)
+        let arg_types = 
+          List.map (fun arg ->
+            match arg with
+            | PyreAst.Concrete.Argument.{annotation; _} ->
+                match annotation with
+                | Some ann -> infer_type ann ctx_map
+                | None -> PSTC.Unset
+          ) args_ls in
+
+        Printf.printf "Found function %s: %s -> %s\n" (PyreAst.Concrete.Identifier.to_string name) 
+          (String.concat ", " (List.map typ_to_str arg_types))
+          (typ_to_str return_type);
+        (* Add function to context map *)
+        Hashtbl.add ctx_map (PyreAst.Concrete.Identifier.to_string name) 
+          (PSTC.Function (arg_types, return_type));
+        (* Process function body *)
         process_statements body ctx_map
     | ClassDef { name; body; _ } ->
         Printf.printf "Found class: %s\n" (PyreAst.Concrete.Identifier.to_string name);
@@ -207,10 +247,6 @@ let read_file filepath =
   let content = really_input_string ic len in
   close_in ic;
   content
-
-  
-
-
 
 let () =
   let filepath = "test_inputs/inp1.py" in
