@@ -1,5 +1,10 @@
 i: int|bool|str
-i = j = k = 2
+i = 2
 
-def f(i, j: int):
-    pass
+def f(i: int, j: int)-> int:
+    return i + j
+
+a:int
+a = f(1, 2)
+a:int = f(1, 2.)
+# a = f(1, 2.0)  # This should raise a type error since 2.0 is not an int
