@@ -1,18 +1,32 @@
-let () = print_endline "Inference Started ..."
+(* Python Static Type Checker - Main Module *)
 
-
+(* This module provides the main functionality for the Python static type checker.
+   It includes type inference, error handling, and processing of Python statements. *)
 exception NotImplemented of string
 exception FunctionCallError of string*PyreAst.Concrete.Location.t
 exception TypeError of string*PyreAst.Concrete.Location.t
+exception FileNotFound of string
+(* exception FileNotFound of string *)
+(* exception FileNotFound of string *)
+(* exception TypeError of string*PyreAst.Concrete.Location.t *)
+(* exception FunctionCallError of string*PyreAst.Concrete.Location.t *)
+(* exception NotImplemented of string *)
 (* exception ParseError of string *)
 
 let red = "\x1b[31m"
 let reset_color = "\x1b[0m"
 let green = "\x1b[32m"
+(* let yellow = "\x1b[33m" *)
+(* let blue = "\x1b[34m" *)
+(* let magenta = "\x1b[35m" *)
+(* let cyan = "\x1b[36m" *)
+(* let white = "\x1b[37m" *)
+
+(* Debug flag to control debug output *)
 
 
 
-let debug = true
+let debug = ref false
 
 let loc_to_str (loc: PyreAst.Concrete.Location.t) : string =
   if loc.start.line = loc.stop.line then
@@ -21,7 +35,7 @@ let loc_to_str (loc: PyreAst.Concrete.Location.t) : string =
     Printf.sprintf "%d-%d | " loc.start.line loc.stop.line
 
 let print_dbg (loc: PyreAst.Concrete.Location.t) (msg: string) = 
-  if debug then
+  if !debug then
     Printf.printf "%s%sDEBUG%s: %s\n" (loc_to_str loc) green reset_color msg
   else
     ()
@@ -46,7 +60,7 @@ module PSTC = struct
     | Function of typ list * typ
     | Lambda of typ list * typ
     | Any
-    | Class of string
+    (* | Class of string *)
     | Unset
   
 end
@@ -81,7 +95,7 @@ let rec typ_to_str (t: PSTC.typ) : string =
         String.concat ", " (List.map typ_to_str args) ^
         " -> " ^ typ_to_str ret ^ ")"
     | Any -> "Any"
-    | Class name -> "class \"" ^ name ^ "\""
+    (* | Class name -> "class \"" ^ name ^ "\"" *)
     | Unset -> "Unset"
   
 let get_location (statement: PyreAst.Concrete.Statement.t) : PyreAst.Concrete.Location.t =
@@ -145,7 +159,7 @@ let rec equ_typ (t1: PSTC.typ) (t2: PSTC.typ) : bool =
       List.exists (fun t -> equ_typ t other) ts1
   | other, PSTC.Union ts2 ->
       List.exists (fun t -> equ_typ other t) ts2
-  | PSTC.Class name1, PSTC.Class name2 -> name1 = name2
+  (* | PSTC.Class name1, PSTC.Class name2 -> name1 = name2 *)
   | PSTC.Any, _ -> true
   | _, PSTC.Any -> true
   | _ -> false
@@ -361,7 +375,7 @@ let rec process_statements (statements: (PyreAst.Concrete.Statement.t list)) (ct
           raise (NotImplemented "Target is not a Name\nAnnotation assignment is not fully implemented"))
     | _ -> print_dbg (get_location statement) (Printf.sprintf "Found other statement")
   ) with
-  | NotImplemented msg-> Printf.printf "%sERROR%s: Not Implement Exception: %s" red reset_color msg
+  | NotImplemented msg-> Printf.printf "%sERROR%s: Not Implemented Exception: %s\n" red reset_color msg
   | FunctionCallError (msg, loc)-> Printf.printf "%s%sERROR%s: %s\n" (loc_to_str loc) red reset_color msg
   | TypeError (msg, loc) -> Printf.printf "%s%sERROR%s: Type Error: %s\n" (loc_to_str loc) red reset_color msg
   ) statements
@@ -374,8 +388,25 @@ let read_file filepath =
   close_in ic;
   content
 
+let get_path () =
+  let args = Sys.argv in
+  if Array.length args > 1 then
+    let filepath = args.(1) in
+    if Sys.file_exists filepath then
+      begin
+        if Array.length args > 2 && args.(2) = "d" then
+          debug := true;
+        filepath
+      end
+    else
+      raise (FileNotFound (Printf.sprintf "%sERROR%s: File '%s' does not exist.\n" red reset_color filepath))
+  else if !debug then
+    "test_inputs/inp1.py"
+  else
+    raise (FileNotFound "No file path provided. Please provide a file path as an argument.")
+
 let () =
-  let filepath = "test_inputs/inp1.py" in
+  let filepath = get_path () in
   let content = read_file filepath in
   let ast = str_to_statements content in
   let ctx_map = Hashtbl.create 10 in
