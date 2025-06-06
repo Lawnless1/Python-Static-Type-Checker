@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Python-Static-Type-Checker` is a tool designed to perform static type checking for Python code. It leverages Python's Abstract Syntax Tree (AST) and provides type inference, error handling, and syntax validation. The project is implemented in OCaml and integrates with Python for syntax checks.
+The `Python-Static-Type-Checker` is a CLI tool designed to perform static type checking for Python code. It leverages Python's Abstract Syntax Tree (AST) and provides type inference, error handling, and syntax validation. The project is implemented in OCaml and integrates with Python for syntax checks.
 
 ## Features
 
