@@ -1,0 +1,4 @@
+class node:
+    def __init__(self, prev, val):
+        self.prev = prev
+        self.val = val
